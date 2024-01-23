@@ -1,0 +1,717 @@
+﻿@using static EmploymentLoyaltySentinel.Models.OffendersModel;
+@inject IJSRuntime JS
+
+<EditForm Model="oModel" OnValidSubmit="@ModalOk">
+    <DataAnnotationsValidator />
+    <div class="modal fade show" role="dialog" aria-modal="true" tabindex="-1" style="display:block;">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <!--Modal Header-->
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">@Title</h4>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="@ModalCancel"></button>
+                </div>
+                <!--Modal Body-->
+                <div class="modal-body mx-3">
+                    <div class="row mb-3">
+                        <div class="col col-md-7">
+                            <div class="row mb-0">
+                                <div class="col col-md-3">
+                                    <picture><img src="@PhotoUrl" class="img-thumbnail img-fluid"></picture>
+                                </div>
+                                <div class="col col-md-5">
+                                    @if (Mode.Button != ModeButton.View)
+                                    {
+                                        <label>Фото: </label>
+                                        <!--загрузка фото-->
+                                        <InputFile OnChange="@OnInputPhotoChange"></InputFile>
+                                        <hr />
+                                        <label>Кандидат: </label>
+                                        <input type="checkbox" class="myInput" checked="@IsCandidate" @oninput="@(()=>IsCandidate = !IsCandidate)" @onclick="@(()=>OnSwich(1))"></input>
+                                        <label class="ms-5">Нет в базе: </label>
+                                        <input type="checkbox" class="myInput" checked="@IsNotBase" @oninput="@(()=>IsNotBase = !IsNotBase)" @onclick="@(()=>OnSwich(2))"></input>
+                                    }
+                                </div>
+                                <div class="col col-md-4">
+                                    <div class="col mb-2">
+                                        <label>Дата рождения: </label>
+                                        <InputDate disabled="@IsDisabledViewing" class="form-control" @bind-Value="@oModel.Dr" />
+                                    </div>
+                                    <div class="col mb-2">
+                                        <label>Дата увольнения: </label>
+                                        <InputDate disabled="@IsDisabledViewing" class="form-control" @bind-Value="@oModel.Dp" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label>ФИО: </label>
+                                <div class="col col-md-8">
+                                    @if (!IsCandidate && !IsNotBase)
+                                    {
+                                        <select disabled="@IsDisabledViewing" class="form-control" value="@oModel.Employee" @onchange="@ChangeEmployee">
+                                            <option value="">-- Выберите сотрудника --</option>
+                                            @foreach (var item in EmployeeList)
+                                            {
+                                                string fio = item.Fio + " - " + item.Grpprg;
+                                                <option value="@item.Fio">@fio</option>
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <InputText disabled="@IsDisabledViewing" class="form-control" @bind-Value="@oModel.Employee"></InputText>
+                                    }
+                                    <ValidationMessage For="(() => oModel.Employee)" />
+                                </div>
+                                <div class="col">
+                                    <input disabled="@IsDisabledViewing" class="form-control" placeholder="Фильтр" @onchange="@FilterEmployee"></input>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col col-md-8">
+                                    <label>Должность: </label>
+                                    @if (!IsNotBase)
+                                    {
+                                        @if (IsCandidate)
+                                        {
+                                            Dol = oModel.Dol = "Кандидат";
+                                        }
+                                        <InputText disabled class="form-control" @bind-Value="@Dol" />
+                                    }
+                                    else
+                                    {
+                                        <InputSelect disabled="@IsDisabledViewing" class="form-control" @bind-Value="@oModel.Dol">
+                                            <option value="">-- Выберите должность --</option>
+                                            @foreach (var item in DolList)
+                                            {
+                                                <option value="@item">@item</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="(() => oModel.Dol)" />
+                                    }
+                                </div>
+                                <div class="col">
+                                    <label>Регион: </label>
+                                    @if (!IsRoleOperator)
+                                    {
+                                        <InputSelect class="form-control" @bind-Value="@oModel.Region">
+                                            <option value="">-- Выберите регион --</option>
+                                            @foreach (KeyValuePair<string, string> item in RegionList)
+                                            {
+                                                <option value="@item.Key">@item.Value</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="(() => oModel.Region)" />
+                                    }
+                                    else
+                                    {
+                                        <input disabled class="form-control" @bind-value="@Region">
+                                    }
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <label>Подразделение: </label>
+                                <div class="col col-md-8">
+                                    @if (!IsRoleOperator)
+                                    {
+                                        <InputSelect disabled="@IsRoleOperator" class="form-control" @bind-Value="@oModel.Grpprg">
+                                            <option value="">-- Выберите подразделение --</option>
+                                            @foreach (KeyValuePair<string, string> item in GrpprgList)
+                                            {
+                                                <option value="@item.Key">@item.Value</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="(() => oModel.Grpprg)" />
+                                    }
+                                    else
+                                    {
+                                        <input disabled class="form-control" @bind-value="@Grpprg">
+                                    }
+                                </div>
+                                <div class="col">
+                                    <input disabled="@IsDisabledViewing" class="form-control" placeholder="Фильтр" @oninput="@FilterGrpprg"></input>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <label>Вид нарушения: </label>
+                                @if (Mode.Button != ModeButton.View)
+                                {
+                                    <div class="col col-md-8">
+                                        <select class="form-control" value="@oModel.Offense" @onchange="@AddOffense">
+                                            <option value="">-- Выберите нарушение --</option>
+                                            @foreach (KeyValuePair<decimal, string> item in OffenseList)
+                                            {
+                                                <option value="@item.Key">@item.Value</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <input class="form-control" placeholder="Фильтр" @oninput="@FilterOffense"></input>
+                                    </div>
+                                }
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col mb-2">
+                                    <div class="cardOffense col text-wrap g-2 img-thumbnail img-fluid" style="background-color: #e9ecef; border: 1px solid #ced4da;">
+                                        <!--Отрисовка во время выбора нарушения-->
+                                        @foreach (var item in OffensesDataList)
+                                        {
+                                            <span>@item.Value</span>
+                                            @if (Mode.Button != ModeButton.View)
+                                            {
+                                                <div @onclick="@(()=>DeleteOffense(item.Key, item.Value, "data"))" type="button" class="btn btn-close btn-sm float-end" data-toggle="tooltip" data-placement="top" title="Удалить" />
+                                            }
+                                            <br />
+                                        }
+                                        @foreach (var item in OffensesLoadList)
+                                        {
+                                            string offense = " " + item.Value;
+                                            <span class="oi oi-paperclip text-start text-success col-md-11">@offense</span>
+                                            @if (Mode.Button != ModeButton.View)
+                                            {
+                                                <div @onclick="@(()=>DeleteOffense(item.Key, item.Value, "load"))" type="button" class="btn btn-close btn-sm float-end" data-toggle="tooltip" data-placement="top" title="Удалить" />
+                                            }
+                                            <br />
+                                        }
+                                        <ValidationMessage For="(() => oModel.Offense)" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col col-md-5">
+                                    <label>Сумма финансовых потерь: </label>
+                                    <InputDecimal Disabled="@IsDisabledViewing" Value="@Summ" OnChange="@ChangeSumm"></InputDecimal>
+                                </div>
+                                <div class="col col-md-5">
+                                    <label>Остаток долга: </label>
+                                    <InputDecimal Disabled="@IsDisabledViewing" Value="@Balance" OnChange="@ChangeBalance"></InputDecimal>
+                                </div>
+                                <div class="col">
+                                    <label>Валюта: </label>
+                                    <InputSelect disabled="@IsDisabledViewing" class="form-control" @bind-Value="@oModel.Cur">
+                                        <option value=""></option>
+                                        @foreach (KeyValuePair<string, string> item in CurList)
+                                        {
+                                            <option value="@item.Key">@item.Value</option>
+                                        }
+                                    </InputSelect>
+                                    @if (oModel.Summ > 0 || oModel.Balance > 0)
+                                    {
+                                        oModel.IsMoney = true;
+                                    }
+                                    else
+                                    {
+                                        oModel.IsMoney = false;
+                                    }
+                                    <ValidationMessage For="(() => oModel.Cur)" />
+                                </div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col col-md-5">
+                                    <label>Статус приёма на работу: </label>
+                                    <select disabled="@IsNotRoleAuditor" class="form-control" value="@oModel.Status" @onchange="@ChangeStatus">
+                                        @foreach (KeyValuePair<string, string> item in YesNoList)
+                                        {
+                                            <option value="@item.Key">@item.Value</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col">
+                                    <label>Представитель КРО: </label>
+                                    <InputText disabled class="form-control" @bind-Value="Auditor" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col col-md-5">
+                            <!--Аудит-->
+                            <div class="col mb-4">
+                                <button type="button" class="btn btn-primary btn-sm float-end pe-3" @onclick="(()=>ShowSection = !ShowSection)"><i class="oi oi-clipboard pe-2"></i>Аудит</button>
+                            </div>
+                            @if (ShowSection && IsRoleAdminOrAuditor)
+                            {
+                                <section class="img-thumbnail img-fluid">
+                                    <div class="col">
+                                        <label>Оператор: </label>
+                                        <InputText disabled class="form-control" @bind-Value="@Operator" />
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col col-md-6">
+                                            <label>Дата создания: </label>
+                                            <InputDate max="2100-01-01" disabled class="form-control" @bind-Value="@oModel.Date_record" />
+                                        </div>
+                                        <div class="col">
+                                            <label>Время создания: </label>
+                                            <input disabled class="form-control" @bind-value="@TimeRecord"></input>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <label>Оператор последнего редактирования: </label>
+                                        <InputText disabled class="form-control" @bind-Value="@Operator_LastEdit" />
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col col-md-6">
+                                            <label>Дата редактирования: </label>
+                                            <InputDate max="2100-01-01" disabled class="form-control" @bind-Value="@Date_LastEdit" />
+                                        </div>
+                                        <div class="col">
+                                            <label>Время редактирования: </label>
+                                            <input disabled class="form-control" @bind-value="@LastTimeRecord"></input>
+                                        </div>
+                                    </div>
+                                </section>
+                                <br />
+                            }
+                            <div class="col mb-2 img-thumbnail img-fluid">
+                                <label>Сопроводительные документы: </label>
+                                @if (Mode.Button != ModeButton.View)
+                                {
+                                    <!--Загрузка файлов-->
+                                    <div class="row">
+                                        <div class="col">
+                                            @for (int i = 0; i < numberOfInputFile; i++)/// При новом выборе будет создавать новый InputFile (для загрузки при нескольких выборах файлов)
+                                            {
+                                                <InputFile @key="i" OnChange="AddInputFile" multiple style="@HideInputFile(i)"></InputFile>
+                                            }
+                                            <button type="button" class="btn btn-secondary btn-sm float-end" @onclick="@ClearFiles">Очистить</button>
+                                        </div>
+                                    </div>
+                                    <div class="cardOffense col text-wrap g-2 img-thumbnail img-fluid" style="border: 1px solid #ced4da;">
+                                        <!--Отрисовка во время выбора-->
+                                        @foreach (IBrowserFile item in ListFiles)
+                                        {
+                                            <span class="btn-sm py-0 px-0 text-start text-success"><i class="fa-solid fa-file-circle-plus pe-2"></i>@item.Name</span>
+                                            <div @onclick="@(()=>ListFiles.Remove(item))" type="button" class="btn btn-close btn-sm float-end" data-toggle="tooltip" data-placement="top" title="Удалить" />
+                                            <br />
+                                        }
+                                    </div>
+                                }
+                                <div class="row mx-0 m-2 row-cols-1 row-cols-sm-2 row-cols-md-4">
+                                    @if ((Mode.Button == ModeButton.Edit || Mode.Button == ModeButton.View) && Files != null)
+                                    {
+                                        <!--Отображение файлов на странице при редактировании и просмотре-->
+                                        string path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/icons/");
+                                        string[] files = Directory.GetFiles(path, "*.png");/// Собрать файлы icons
+                                        List<string> listIconNames = new();
+                                        foreach (var item in files)
+                                        {
+                                            string file = item.Split(path)[1];
+                                            listIconNames.Add(file.Split('.')[0]);
+                                        }
+                                        foreach (var item in Files)
+                                        {
+                                            decimal id = item.Id;
+                                            string fileName = item.Nam;
+                                            byte[] bytes = (byte[])item.Files;
+
+                                            string file = $"data:application/vnd;base64,{Convert.ToBase64String(bytes)}";
+                                            string fileExtension = fileName.Substring(fileName.LastIndexOf('.') + 1).ToLower();/// расширение файла
+                                            <div class="cards col mb-2 m-1 text-break g-2 img-thumbnail img-fluid">
+                                                @if (Mode.Button != ModeButton.View)
+                                                {
+                                                    <div @onclick="@(()=>DeleteFile(id, fileName))" type="button" class="btn btn-close btn-sm float-end" data-toggle="tooltip" data-placement="top" title="Удалить" />
+                                                }
+                                                <!--Картинка-->
+                                                <button @onclick="@(()=>DownLoad(fileName, file))" type="button" class="btn btn-link btn-sm py-0 px-0" data-toggle="tooltip" data-placement="top" title="Скачать">
+                                                    @if (listIconNames.Contains(fileExtension))/// Если в коллекции иконок имя файла совпадает с расширением файлов из базы
+                                                    {
+                                                        string src = $"./images/icons/{fileExtension}.png";
+                                                        <img src="@src" class="img-thumbnail img-fluid" />
+                                                    }
+                                                    else/// Если не найдено расширение в коллекции, то стандартная картинка
+                                                    {
+                                                        string src = $"./images/icons/file.png";
+                                                        <img src="@src" class="img-thumbnail img-fluid" />
+                                                    }
+                                                </button>
+                                                <!--Ссылка-->
+                                                <button @onclick="@(()=>DownLoad(fileName, file))" type="button" class="btn btn-link btn-sm py-0 px-0" data-toggle="tooltip" data-placement="top" title="Скачать" style="font-size:smaller;">@fileName</button>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                                <div class="col mb-1">
+                                    @if (Files != null && Files.Count != 0)
+                                    {
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="DownLoadFiles">
+                                            <i class="oi oi-cloud-download" style="padding-right:5px;" />Скачать файлы
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--Modal Footer-->
+                <div class="modal-footer">
+                    <!--Признак удалённой записи-->
+                    <div class="col-9">
+                        @if (oModel.Deleted == "F")
+                        {
+                            <i class="h1 text-success float-start oi oi-credit-card"></i>
+                        }
+                        else if (oModel.Deleted == "T")
+                        {
+                            <i class="h2 text-danger float-start oi oi-trash"></i>
+                        }
+                    </div>
+                    @if (Mode.Button != ModeButton.View)
+                    {
+                        <button type="submit" class="btn btn-success" style="width: 110px;">Сохранить</button>
+                        <button type="button" class="btn btn-secondary" style="width: 110px;" @onclick="@ModalCancel">Отмена</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="@ExportExcel"><i class="oi oi-data-transfer-download pe-3"></i>Выгрузить</button>
+                        <button type="button" class="btn btn-warning" style="width: 80px;" @onclick="@ModalCancel">OK</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+<ToastNotification IsOpen="@Toast.IsOpen" Text="@Toast.RenderText" Level="@Toast.Level"></ToastNotification>
+<ModalDialog IsOpen="@IsModalDialogOpen" Text="@RenderText" Title="@TitleModalDialog" Choice="Choice" OnClose="@CloseModalDialog"></ModalDialog>
+@code {
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+    [Parameter] public int IdUser { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Role { get; set; }
+    [Parameter] public OffendersModel Row { get; set; }
+    OffendersModel oModel = new();
+    private RenderFragment RenderText { get; set; }
+    private string TitleModalDialog { get; set; }
+    private bool IsDisabledViewing { get; set; }
+    private bool IsNotBase { get; set; }
+    private bool IsCandidate { get; set; }
+    private bool IsModalDialogOpen { get; set; }
+    private bool Choice { get; set; }
+    private bool ShowSection { get; set; } = false;
+    private bool IsRoleAdminOrAuditor { get; set; }
+    private bool IsNotRoleAuditor { get; set; }
+    private bool IsRoleOperator { get; set; }
+    private List<Employee> EmployeeList { get; set; }
+    private List<string> DolList { get; set; }
+    private Dictionary<string, string> RegionList { get; set; }
+    private Dictionary<string, string> GrpprgList { get; set; }
+    private Dictionary<decimal, string> OffenseList { get; set; }
+    private Dictionary<string, string> CurList { get; set; }
+    private Dictionary<string, string> YesNoList { get; set; }
+    private List<File> Files { get; set; }
+    private List<IBrowserFile> ListFiles { get; set; }
+    private Dictionary<decimal, string> OffensesDataList { get; set; }
+    private Dictionary<decimal, string> OffensesLoadList { get; set; }
+    private DateTime Date_LastEdit { get; set; }
+    private decimal Summ { get; set; }
+    private decimal Balance { get; set; }
+    private string LastTimeRecord { get; set; }
+    private string TimeRecord { get; set; }
+    private string Region { get; set; }
+    private string Dol { get; set; }
+    private string Auditor { get; set; }
+    private string Grpprg { get; set; }
+    private string PhotoUrl { get; set; }
+    private byte[] BytePhoto { get; set; }
+    private string Operator { get; set; }
+    private string Operator_LastEdit { get; set; }
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private int numberOfInputFile = 1;
+    protected override async Task OnInitializedAsync()
+    {
+        IsNotRoleAuditor = Role == "MGKRO" ? false : true;
+        IsRoleOperator = Role == "OPERR" || Role == "MANAG" ? true : false;
+        IsRoleAdminOrAuditor = Role == "ADMIN" || Role == "MGKRO" ? true : false;
+        IsDisabledViewing = Mode.Button == ModeButton.View;
+        oModel.Loginid = IdUser;
+        EmployeeList = oModel.GetListEmployee(null, IsRoleAdminOrAuditor);
+        DolList = oModel.GetListDol();
+        RegionList = oModel.GetListRegion();
+        GrpprgList = oModel.GetListGrpprg();
+        OffenseList = oModel.GetListOffense();
+        CurList = oModel.GetListCur();
+        YesNoList = oModel.YesNoList();
+        OffensesDataList = new();
+        OffensesLoadList = new();
+        ListFiles = new List<IBrowserFile>();
+        if (Mode.Button == ModeButton.Edit || Mode.Button == ModeButton.View)
+        {
+            if (Mode.Button == ModeButton.View)
+            {
+                IsNotRoleAuditor = true;
+                IsRoleOperator = true;
+            }
+            oModel.Id = Row.Id;
+            oModel.Employee = Row.Employee;
+            Dol = oModel.Dol = Row.Dol;
+            oModel.Dr = Row.Dr;
+            oModel.Dp = Row.Dp;
+            oModel.Grpprg = Row.Grpprg;
+            oModel.Region = Row.Region;
+            Summ = oModel.Summ = Row.Summ;
+            Balance = oModel.Balance = Row.Balance;
+            oModel.Cur = Row.Cur;
+            oModel.Loginid = Row.Loginid;
+            oModel.Loginid_lastedit = Row.Loginid_lastedit;
+            oModel.Date_record = Row.Date_record;
+            Date_LastEdit = oModel.Date_lastedit = Mode.Button == ModeButton.Edit ? DateTime.Now : Row.Date_lastedit;
+            TimeRecord = oModel.Date_record.ToShortTimeString();
+            LastTimeRecord = oModel.Date_lastedit.ToShortTimeString();
+            oModel.Status = Row.Status;
+            Auditor = oModel.Auditor = Row.Auditor;
+            oModel.Photo = Row.Photo;
+            oModel.Deleted = Row.Deleted;
+            oModel.Inbase = Row.Inbase;
+
+            BytePhoto = (byte[])oModel.Photo;
+            var img = Convert.ToBase64String(BytePhoto);
+            PhotoUrl = "./images/avatar.jpg";
+            if (img.Length >= 1)
+            {
+                PhotoUrl = $"data:image/png;base64,{img}";
+            }
+
+            Region = RegionList[oModel.Region];
+            Grpprg = GrpprgList.ContainsKey(oModel.Grpprg) ? GrpprgList[oModel.Grpprg] : oModel.GetListGrpprg(null, "F")[oModel.Grpprg];/// Если подразделение закрыто
+
+            Operator = oModel.GetEmployeeForUserId(oModel.Loginid);/// Создавший запись, его не меняем
+            Operator_LastEdit = Mode.Button == ModeButton.View ? oModel.GetEmployeeForUserId(oModel.Loginid_lastedit) : oModel.GetEmployeeForUserId(IdUser);/// Оператор последнего редактирования если просмотр
+            OffensesDataList = oModel.GetOffenses(oModel.Id);
+            oModel.Offense = oModel.GetOffense(oModel.Id);
+            if (Mode.Button == ModeButton.Edit)
+                EmployeeList = IsRoleAdminOrAuditor == true ? oModel.GetListEmployee(Row.Employee, true) : oModel.GetListEmployee(null, false);/// Приходится фильтровать из за rownum <= 500
+            else if (Mode.Button == ModeButton.View)
+                EmployeeList = oModel.GetListEmployee(Row.Employee, true);
+
+            await InvokeAsync(() => Files = oModel.GetFiles());
+        }
+        else
+        {
+            oModel.Loginid = IdUser;
+            oModel.Loginid_lastedit = IdUser;
+            Operator = oModel.GetEmployeeForUserId(IdUser);/// Текущий пользователь
+            oModel.Region = oModel.GetRegion();
+            oModel.Grpprg = oModel.GetGrpprg();
+            Region = RegionList[oModel.Region];
+            Grpprg = GrpprgList[oModel.Grpprg];
+            oModel.Date_record = DateTime.Now;
+            Date_LastEdit = oModel.Date_lastedit = DateTime.Now;
+            TimeRecord = DateTime.Now.ToShortTimeString();
+            LastTimeRecord = DateTime.Now.ToShortTimeString();
+            oModel.Status = "U";
+            oModel.Auditor = string.Empty;
+            oModel.Deleted = null;
+            PhotoUrl = "./images/avatar.jpg";
+        }
+        BytePhoto = BytePhoto == null ? new byte[0] : BytePhoto;
+        IsNotBase = oModel.Inbase == "F" ? true : false;
+    }
+    private void ChangeSumm(decimal value) => oModel.Summ = Summ = value;
+    private void ChangeBalance(decimal value) => oModel.Balance = Balance = value;
+    private void OnSwich(int i)
+    {
+        if (i == 1) IsNotBase = false;
+        if (i == 2) IsCandidate = false;
+        oModel.Inbase = IsNotBase ? "F" : "T";
+    }
+    private void ChangeEmployee(ChangeEventArgs e)/// Привязка к сотруднику
+    {
+        foreach (var item in EmployeeList)
+        {
+            if (item.Fio == e.Value.ToString())
+            {
+                oModel.Employee = item.Fio;
+                Dol = oModel.Dol = item.Dol;
+                oModel.Region = item.Region;
+                oModel.Grpprg = item.Grpprg;
+                oModel.Dp = item.De;
+                oModel.Dr = item.Dr;
+            }
+        }
+    }
+    private void AddOffense(ChangeEventArgs e)/// Добавление нарушений
+    {
+        if (!string.IsNullOrWhiteSpace(e.Value.ToString()))
+        {
+            decimal id = Convert.ToDecimal(e.Value);
+            string offense = oModel.GetOffenseSpr(id);
+            if (!string.IsNullOrWhiteSpace(offense))
+            {
+                if (!OffensesLoadList.ContainsKey(id) && !OffensesDataList.ContainsValue(offense))/// Проверка на дубли
+                {
+                    oModel.Offense = offense;
+                    OffensesLoadList.Add(id, offense);
+                }
+            }
+        }
+    }
+    private void UploadOffenses(int idOffenders)/// Загрузка нарушений
+    {
+        if (OffensesLoadList != null)
+        {
+            foreach (var item in OffensesLoadList)
+            {
+                oModel.InsertOffenses(idOffenders, item.Value);
+            }
+        }
+    }
+    private async Task OnInputPhotoChange(InputFileChangeEventArgs e)/// Фото
+    {
+        IBrowserFile file = e.File;
+        string fileType = file.ContentType;
+        var resizeFile = await file.RequestImageFileAsync(fileType, 200, 200);
+        byte[] buffer = new byte[resizeFile.Size];
+        await resizeFile.OpenReadStream().ReadAsync(buffer);
+
+        PhotoUrl = $"data:{fileType};base64,{Convert.ToBase64String(buffer)}";
+        BytePhoto = buffer;
+    }
+    private void ClearFiles() { selectedFiles = null; ListFiles.Clear(); }/// Очистить загруженные файлы
+    private string HideInputFile(int i) { return i == numberOfInputFile - 1 ? "width: 130px;" : "display: none"; }/// Скрыть InputFile
+    private async Task AddInputFile(InputFileChangeEventArgs e)/// Добавление файлов
+    {
+        if (e.FileCount <= 5)
+        {
+            selectedFiles = e.GetMultipleFiles(5);
+            this.StateHasChanged();
+            if (selectedFiles != null)
+            {
+                numberOfInputFile++;
+                long size = 5 * 1024 * 1024;
+                foreach (IBrowserFile file in selectedFiles)
+                {
+                    if (file.Size <= size)
+                    {
+                        ListFiles.Add(file);
+                    }
+                    else
+                    {
+                        selectedFiles = null;
+                        await Toast.Notification(@<span>Файл или общее количество файлов не должно превышать 5мб!</span>, ToastLevel.Info);
+                    }
+                }
+            }
+        }
+        else await Toast.Notification(@<span>Общее количество файлов не должно превышать 5шт!</span>, ToastLevel.Info);
+    }
+    private async Task UploadFiles(int idOffenders)/// Загрузка файлов
+    {
+        selectedFiles = ListFiles;
+        if (selectedFiles != null)
+        {
+            foreach (IBrowserFile file in selectedFiles)
+            {
+                byte[] buffer = new byte[file.Size];
+                using Stream stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                MemoryStream ms = new();
+                await stream.CopyToAsync(ms);
+                buffer = ms.ToArray();
+                oModel.InsertFiles(buffer, file.Name, idOffenders);
+                stream.Close();
+                ms.Close();
+                this.StateHasChanged();
+            }
+        }
+    }
+    private async Task DownLoad(string fileName, string file) => await JS.InvokeVoidAsync("downloadFile", fileName, file);/// Скачивание одного файла
+    private async Task DownLoadFiles()/// Скачивание файлов
+    {
+        foreach (var item in Files)
+        {
+            byte[] bytes = (byte[])item.Files;
+            string fileName = item.Nam;
+            string file = $"data:application/vnd;base64,{Convert.ToBase64String(bytes)}";
+            await JS.InvokeVoidAsync("downloadFile", fileName, file);
+        }
+    }
+    private void DeleteOffense(decimal id, string Offense, string sign)/// Удаление нарушения
+    {
+        if (sign == "data")
+        {
+            IsModalDialogOpen = true;
+            Choice = true;/// Диалоговое окно с выбором
+            TitleModalDialog = "Удаление нарушения!";
+            RenderText = @<span>Вы действительно хотие удалить нарушение?<br />@Offense</span>;
+            oModel.OffenseID = id;
+        }
+        else
+        {
+            OffensesLoadList.Remove(id);
+            if (OffensesLoadList.Count == 0) oModel.Offense = null;
+        }
+    }
+    private async Task DeleteFile(decimal id, string fileName)/// Удаление файла
+    {
+        if (Role == "ADMIN")
+        {
+            IsModalDialogOpen = true;
+            Choice = true;/// Диалоговое окно с выбором
+            TitleModalDialog = "Удаление файла!";
+            RenderText = @<span>Вы действительно хотие удалить файл?<br />@fileName</span>;
+            oModel.FileID = id;
+        }
+        else
+        {
+            await Toast.Notification(@<span>Удалять файлы может только администратор!</span>, ToastLevel.Error);
+        }
+    }
+    private void ChangeStatus(ChangeEventArgs e)
+    {
+        if (!IsNotRoleAuditor)/// Только для Аудиторов
+        {
+            oModel.Status = e.Value.ToString();
+            Auditor = oModel.Auditor = e.Value.ToString() == "T" || e.Value.ToString() == "F" ? oModel.GetEmployeeForUserId(IdUser) : string.Empty;
+        }
+    }
+    void ExportExcel()
+    {
+        ExcelModel excelModel = new();
+        List<OffendersModel> Table = new();
+        Table.Add(Row);
+        excelModel.GenerateOffendersExcel(JS, Table, $"Данные по нарушителю - {oModel.Employee}");
+    }
+    private void FilterEmployee(ChangeEventArgs e) => EmployeeList = oModel.GetListEmployee(e.Value.ToString(), IsRoleAdminOrAuditor);/// Фильтр сотрудников
+    private void FilterOffense(ChangeEventArgs e) => OffenseList = oModel.GetListOffense(e.Value.ToString());/// Фильтр нарушений
+    private void FilterGrpprg(ChangeEventArgs e) => GrpprgList = oModel.GetListGrpprg(e.Value.ToString());/// Фильтр подразделений
+    private async Task ModalOk()
+    {
+        if (Mode.Button != ModeButton.View)
+        {
+            if (oModel.EmployeeDublicate())
+            {
+                int idOffenders = oModel.InsertUpdateOffenders(BytePhoto);
+                UploadOffenses(idOffenders);/// Загрузка нарушений
+                await UploadFiles(idOffenders);/// Загрузка файлов
+            }
+            else /// Если Нарушитель с таким именем существует
+            {
+                await Toast.Notification(@<span>Нарушитель уже существует в базе!</span>, ToastLevel.Info);
+            }
+            await OnClose.InvokeAsync(true);
+        }
+        else
+            await OnClose.InvokeAsync(true);
+    }
+    private Task ModalCancel() => OnClose.InvokeAsync(false);
+    private async Task CloseModalDialog(bool accepted)
+    {
+        if (accepted)
+        {
+            switch (TitleModalDialog)
+            {
+                case "Удаление файла!":
+                    oModel.DeleteFile();
+                    Files.RemoveAll(x => x.Id == oModel.FileID);
+                    break;
+                case "Удаление нарушения!":
+                    oModel.DeleteOffense();
+                    OffensesDataList.Remove(oModel.OffenseID);
+                    break;
+            }
+            IsModalDialogOpen = false;
+            await Toast.Notification(@<span>Удаление выполнено успешно!</span>, ToastLevel.Success);
+        }
+        else
+            IsModalDialogOpen = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,52 @@
+﻿<EditForm Model="oModel" OnValidSubmit="@ModalOk">
+    <DataAnnotationsValidator />
+    <div class="modal fade show" role="dialog" aria-modal="true" tabindex="-1" style="display:block;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!--Modal Header-->
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">@Title</h4>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="@ModalCancel"></button>
+                </div>
+                <!--Modal Body-->
+                <div class="modal-body mx-3">
+                    <label>Нарушение</label>
+                    <InputTextArea class="form-control" @bind-Value="oModel.Nam" />
+                    <ValidationMessage For="(() => oModel.Nam)" />
+                </div>
+                <!--Modal Footer-->
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success" style="width: 110px;">Сохранить</button>
+                    <button type="button" class="btn btn-secondary" style="width: 110px;" @onclick="@ModalCancel">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public DataRow Row { get; set; }
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+    OffenseModel oModel = new();
+    protected override void OnInitialized()
+    {
+        if (!IsNew)/// Заполнение формы при редактировании
+        {
+            oModel.Id = Convert.ToInt32(Row["Id"]);
+            oModel.Nam = Row["Nam"].ToString();
+            oModel.Deleted = Row["Deleted"].ToString();
+        }
+        oModel.Deleted = "F";
+    }
+    private Task ModalOk()
+    {
+        oModel.IsNew = IsNew;
+        oModel.InsertUpdateOffense();
+        return OnClose.InvokeAsync(true);
+    }
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+    }

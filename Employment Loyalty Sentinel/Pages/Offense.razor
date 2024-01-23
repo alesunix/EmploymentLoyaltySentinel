@@ -1,0 +1,179 @@
+﻿@page "/offense"
+@attribute [Authorize]
+
+<div class="container-fluid position-fixed bg-light py-3 pt-5 border-start border-end border-bottom" style="z-index: 2;width: 85.5%;margin-top: -24px;">
+    <div class="row">
+        <div class="col btn-group" role="group">
+            <button class="btn btn-primary me-2" @onclick="@Add"><i class="oi oi-plus pe-2"></i>Добавить</button>
+            <button disabled="@IsNotFocused" class="btn btn-secondary me-2" @onclick="@Edit"><i class="oi oi-excerpt pe-2"></i>Изменить</button>
+            <button disabled="@IsNotFocused" class="@VisibleDel btn btn-danger me-2" @onclick="@Delete"><i class="oi oi-trash pe-2"></i>Удалить</button>
+            <button disabled="@IsNotFocused" class="@VisibleRec btn btn-info me-2" @onclick="@Recovery"><i class="oi oi-reload pe-2"></i>Восстановить</button>
+        </div>
+        <div class="col btn-group float-end" role="group">
+            <div class="col-6">
+            </div>
+            <div class="col-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="oi oi-magnifying-glass"></i></span>
+                    <input @bind-value="SearchValue" class="form-control" placeholder="Поиск" @oninput="@FilterTable"></input>
+                    <button @onclick="(()=>FilterTable(new ChangeEventArgs {Value=string.Empty}))" class="btn btn-secondary oi oi-x"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br />
+
+<!--Offense Table-->
+<div @ref="@Reference" class="table-solid" style="margin-top: 50px;">
+    <table class="table table-striped table-hover align-middle caption-top">
+        <thead class="thead-primary position-sticky" style="z-index: 2;width: 85.4%;top:155px;">
+            <tr>
+                <th>Нарушения</th>
+                <th>Удалено</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Table == null)
+            {
+                <ToastNotification Data="Load" />
+            }
+            else if (Table.Rows.Count == 0)
+            {
+                <ToastNotification Data="NoData" />
+            }
+            else
+            {
+                foreach (DataRow item in Table.Rows)
+                {
+                    int id = Convert.ToInt32(item["Id"]);/// id
+                    string bg = (id == SelectedId) ? "selected-row" : "";
+                    <tr class="hover-row @bg" @onclick="@(()=>RowClicked(id))" @key="item">
+                        <td hidden>@item["Id"]</td>
+                        <td>@item["Nam"]</td>
+                        <td>
+                            @if (item["Deleted"].ToString() == "T")
+                            {
+                                <i class="oi oi-trash h5" style="color:brown;"></i>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+<ToastNotification IsOpen="@Toast.IsOpen" Text="@Toast.RenderText" Level="@Toast.Level"></ToastNotification>
+<ModalDialog IsOpen="@IsAttention" Text="@RenderText" Title="@Title" OnClose="@CloseModal"></ModalDialog>
+@if (IsOpenModal)
+{
+    <ModalOffense Row="@Row" IsNew="@IsNew" Title="@Title" OnClose="@CloseModal"></ModalOffense>
+}
+@code {
+    private bool IsOpenModal { get; set; }
+    private bool IsAttention { get; set; }
+    private bool IsNew { get; set; }
+    private bool IsNotFocused { get; set; } = true;
+    private string VisibleDel { get; set; } = "visible";
+    private string VisibleRec { get; set; } = "invisible";
+    private int SelectedId { get; set; }
+    private DataTable Table { get; set; }
+    private DataRow Row { get; set; }
+    private string Title { get; set; }
+    private RenderFragment RenderText { get; set; }
+    private string SearchValue { get; set; }
+    OffenseModel oModel = new();
+    [CascadingParameter] public MainLayout Layout { get; set; }
+    public ElementReference Reference { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        Layout.Title = "Справочник нарушений";
+        Layout.Page = this;
+        await Task.Run(RefreshTable);
+    }
+    void RefreshTable() => Table = oModel.GetDataOffense();
+    void FilterTable(ChangeEventArgs e)/// Поиск
+    {
+        if (string.IsNullOrWhiteSpace(e.Value.ToString()))
+        {
+            SearchValue = null;
+            Table = oModel.GetDataOffense(string.Empty);
+        }
+        else
+            Table = oModel.GetDataOffense(e.Value.ToString());
+    }
+    private void RowClicked(int id)
+    {
+        SelectedId = id;
+        IsNotFocused = (id == SelectedId) ? false : true;
+        Row = oModel.GetRowToEdit(SelectedId).Rows[0];
+        if (Row["Deleted"].ToString() == "F") { VisibleDel = "visible"; VisibleRec = "invisible"; }
+        else { VisibleDel = "invisible"; VisibleRec = "visible"; }
+    }
+    public void Add()
+    {
+        if (!IsOpenModal)
+        {
+            IsNew = true;
+            IsOpenModal = true;
+            Title = "Добавление";
+        }
+    }
+    public void Edit()
+    {
+        if (!IsOpenModal && SelectedId > 0 && !IsNotFocused)
+        {
+            Row = oModel.GetRowToEdit(SelectedId).Rows[0];
+            IsNew = false;
+            IsOpenModal = true;
+            Title = "Редактирование";
+        }
+    }
+    public void Delete()
+    {
+        if (!IsOpenModal && SelectedId > 0 && !IsNotFocused && VisibleDel == "visible")
+        {
+            IsAttention = true;
+            Title = "Внимание!";
+            RenderText = @<span>Вы действительно хотие удалить?<br />@Row["Nam"].ToString()</span>;
+            oModel.Id = SelectedId;
+            oModel.Deleted = "T";
+        }
+    }
+    public void Recovery()
+    {
+        if (!IsOpenModal && SelectedId > 0 && !IsNotFocused && VisibleRec == "visible")
+        {
+            IsAttention = true;
+            Title = "Внимание!";
+            RenderText = @<span>Вы действительно хотие восстановить?</span>;
+            oModel.Id = SelectedId;
+            oModel.Deleted = "F";
+        }
+    }
+    private async Task CloseModal(bool accepted)
+    {
+        if (accepted)
+        {
+            switch (Title)
+            {
+                case "Внимание!":
+                    oModel.DeleteOrRecoveryOffense();
+                    break;
+            }
+            RefreshTable();
+            if (Title != "Внимание!")
+            {
+                IsOpenModal = false;
+                await Toast.Notification(@<span>Нарушение успешно сохранено!</span>, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            IsAttention = false;
+            IsOpenModal = false;
+        }
+        await Task.Run(() => Reference.FocusAsync());
+        StateHasChanged();
+    }
+}

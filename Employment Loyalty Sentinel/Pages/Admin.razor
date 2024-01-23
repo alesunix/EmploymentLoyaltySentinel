@@ -1,0 +1,63 @@
+﻿@page "/admin"
+@attribute [Authorize]
+
+<div class="row">
+    <div class="col col-md-10">
+        <AuthorizeView Roles="ADMIN">
+            <a href="./users">
+                <div class="link-primary cardlink cards">
+                    <img src="./images/users.png" />
+                    <div>Пользователи</div>
+                </div>
+            </a>
+        </AuthorizeView>
+        <AuthorizeView>
+            <span role="button">
+                <div class="link-primary cardlink cards" @onclick="@(()=> Edit())">
+                    <img src="./images/password.png" />
+                    <div>Изменить пароль</div>
+                </div>
+            </span>
+        </AuthorizeView>
+        <AuthorizeView Roles="ADMIN">
+            <a href="./offense">
+                <div class="link-primary cardlink cards">
+                    <img src="./images/books.png" />
+                    <div>Справочник нарушений</div>
+                </div>
+            </a>
+        </AuthorizeView>
+    </div>
+</div>
+@if (OpenModal)
+{
+    <ModalPasswordChange Title="Смена пароля" Id="@Id" OnClose="@CloseModal"></ModalPasswordChange>
+}
+@code {
+    private bool OpenModal { get; set; }
+    public int Id { get; set; }
+    [CascadingParameter] public MainLayout Layout { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStat { get; set; }
+    private async Task Greating()
+    {
+        var auth = await AuthStat;
+        var user = auth.User;
+    }
+    protected async override void OnInitialized()
+    {
+        var auth = await AuthStat;
+
+        Id = Convert.ToInt32(auth.User.FindFirstValue(ClaimTypes.NameIdentifier));
+        Layout.Title = "Администрирование";
+        base.OnInitialized();
+    }
+    void Edit()
+    {
+        OpenModal = true;
+    }
+    void CloseModal()
+    {
+        OpenModal = false;
+        StateHasChanged();
+    }
+}

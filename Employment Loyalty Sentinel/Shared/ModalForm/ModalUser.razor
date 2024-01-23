@@ -1,0 +1,168 @@
+﻿@using static EmploymentLoyaltySentinel.Models.OffendersModel;
+<EditForm Model="uModel" OnValidSubmit="@ModalOk">
+    <DataAnnotationsValidator />
+    <div class="modal fade show" role="dialog" aria-modal="true" tabindex="-1" style="display:block;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!--Modal Header-->
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">@Title</h4>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="@ModalCancel"></button>
+                </div>
+                <!--Modal Body-->
+                <div class="modal-body mx-3">
+                    <div class="row mb-2">
+                        <label>Сотрудник: </label>
+                        <div class="col col-md-8">
+                            <select class="form-control" value="@uModel.Employee" @onchange="@ChangeEmployee">
+                                <option value="">-- Выберите сотрудника --</option>
+                                @foreach (var item in EmployeeList)
+                                {
+                                    string fio = item.Fio + " - " + item.Grpprg;
+                                    <option value="@item.Fio">@fio</option>
+                                }
+                            </select>
+                            <ValidationMessage For="(() => uModel.Employee)" />
+                        </div>
+                        <div class="col col-md-4">
+                            <input class="form-control" placeholder="Фильтр" @onchange="@FilterEmployee"></input>
+                        </div>
+                    </div>
+                    <div class="row md-2">
+                        <div class="col col-md-6">
+                            <label>Логин</label>
+                            <InputText class="form-control" @bind-Value="@uModel.Login" />
+                            <ValidationMessage For="(() => uModel.Login)" />
+                        </div>
+                        <div class="col col-md-6">
+                            <label>p-Service</label>
+                            <InputNumber class="form-control" @bind-Value="@uModel.PService" />
+                            <ValidationMessage For="(() => uModel.PService)" />
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col col-md-6">
+                            <label>Пароль</label>
+                            <InputText type="password" class="form-control" @bind-Value="@uModel.Pass1" />
+                            <ValidationMessage For="(() => uModel.Pass1)" />
+                        </div>
+                        <div class="col col-md-6">
+                            <label>Повторить пароль</label>
+                            <InputText type="password" class="form-control" @bind-Value="@uModel.Pass2" />
+                            <ValidationMessage For="(() => uModel.Pass2)" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label>е-Mail</label>
+                        <InputText class="form-control" @bind-Value="@uModel.Mail" />
+                        <ValidationMessage For="(() => uModel.Mail)" />
+                    </div>
+                    <div class="mb-2">
+                        <label>Роль</label>
+                        <InputSelect class="form-control" @bind-Value="@uModel.RoleId">
+                            @foreach (var item in RoleList)
+                            {
+                                <option value="@item.Key">@item.Value</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="(() => uModel.RoleId)" />
+                    </div>
+                    <div class="mb-2">
+                        <label>Регион</label>
+                        <InputSelect class="form-control" @bind-Value="@uModel.Region">
+                            <option value="">-- Выберите регион --</option>
+                            @foreach (var item in RegionList)
+                            {
+                                <option value="@item.Key">@item.Value</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="(() => uModel.Region)" />
+                    </div>
+                    <div class="row mb-2">
+                        <label>Подразделение</label>
+                        <div class="col col-md-8">
+                            <InputSelect class="form-control" @bind-Value="@uModel.Grpprg">
+                                <option value="">-- Выберите подразделение --</option>
+                                @foreach (var item in GrpprgList)
+                                {
+                                    <option value="@item.Key">@item.Value</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="(() => uModel.Grpprg)" />
+                        </div>
+                        <div class="col col-md-4">
+                            <input class="form-control" placeholder="Фильтр" @onchange="@FilterGrpprg"></input>
+                        </div>
+                    </div>
+                </div>
+                <!--Modal Footer-->
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success" style="width: 110px;">Сохранить</button>
+                    <button type="button" class="btn btn-secondary" style="width: 110px;" @onclick="@ModalCancel">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+<ToastNotification IsOpen="@Toast.IsOpen" Text="@Toast.RenderText" Level="@Toast.Level"></ToastNotification>
+@code {
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public DataRow Row { get; set; }
+    private RenderFragment RenderText { get; set; }
+    private List<Employee> EmployeeList { get; set; }
+    private Dictionary<decimal, string> RoleList { get; set; }
+    private Dictionary<string, string> RegionList { get; set; }
+    private Dictionary<string, string> GrpprgList { get; set; }
+    UserModel uModel = new UserModel();
+    protected override void OnInitialized()
+    {
+        uModel.IsNew = Mode.Button == ModeButton.Add;
+        EmployeeList = uModel.GetListEmployee();
+        RoleList = uModel.GetListRoles();
+        RegionList = uModel.GetListRegion();
+        GrpprgList = uModel.GetListGrpprg();
+
+        if (Mode.Button == ModeButton.Edit)/// Заполнение формы при редактировании
+        {
+            EmployeeList = uModel.GetListEmployee(Row["Employee"].ToString());/// Приходится фильтровать из за rownum <= 500
+            uModel.Id = Convert.ToInt32(Row["Id"]);
+            uModel.Employee = Row["Employee"].ToString();
+            uModel.Login = Row["Login"].ToString();
+            uModel.Mail = Row["Mail"].ToString();
+            uModel.PService = Convert.ToInt32(Row["PService"]);
+            uModel.Deleted = Row["Deleted"].ToString();
+            uModel.RoleId = Convert.ToInt32(Row["role_id"]);
+            uModel.Region = Row["Region"].ToString();
+            uModel.Grpprg = Row["Grpprg"].ToString();
+            uModel.Password = Row["Password"].ToString();
+        }
+        else
+            uModel.Deleted = "F";
+    }
+    private void ChangeEmployee(ChangeEventArgs e)/// Привязка к сотруднику
+    {
+        foreach (var item in EmployeeList)
+        {
+            if (item.Fio == e.Value.ToString())
+            {
+                uModel.Employee = item.Fio;
+                uModel.Region = item.Region;
+                uModel.Grpprg = item.Grpprg;
+            }
+        }
+    }
+    private void FilterEmployee(ChangeEventArgs e) => EmployeeList = uModel.GetListEmployee(e.Value.ToString());
+    private void FilterGrpprg(ChangeEventArgs e) => GrpprgList = uModel.GetListGrpprg(e.Value.ToString());
+    private async Task ModalOk()
+    {
+        if (!uModel.AddOrEditUser())
+        {
+            await Toast.Notification(@<span>@BaseModel.MyMessage</span>, ToastLevel.Info);
+        }
+        else
+            await OnClose.InvokeAsync(true);
+    }
+    private Task ModalCancel() => OnClose.InvokeAsync(false);
+
+}

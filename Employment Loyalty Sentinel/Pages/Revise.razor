@@ -1,0 +1,111 @@
+﻿@page "/revise"
+@attribute [Authorize]
+@inject IJSRuntime JS
+
+<div class="container-fluid position-fixed bg-light py-3 pt-5 border-start border-end border-bottom" style="z-index: 2;width: 85.5%;margin-top: -24px;">
+    @if (Table != null && Table.Count != 0)
+    {
+        <div class="alert alert-secondary">
+            <h5>
+                <span class="oi oi-fire me-2" aria-hidden="true" style="color:brown;"></span>
+                В списке представлены нарушители, требующие дополнительного контроля.
+            </h5>
+            Попавший в этот список, имеет дату увольнения, отличную от даты, установленной в учётной карточке системы контроля нарушителей.<br />
+            Необходимо уточнить причины несовпадения дат (повторный приём, ошибка в дате увольнения) и принять соответствующие меры по устранению несоответствий.<br />
+        </div>
+    }
+    else if (Table != null && Table.Count == 0)
+    {
+        <div class="alert alert-secondary mt-4">
+            <span class="oi oi-pencil me-2" aria-hidden="true"></span>
+            Все в порядке, проверка не дала результатов.
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-5">
+            <div class="input-group">
+                <span class="input-group-text"><i class="oi oi-magnifying-glass"></i></span>
+                <input @bind-value="@SearchValue" class="form-control" placeholder="Поиск" @oninput="@FilterTable"></input>
+                <button @onclick="(()=>FilterTable(new ChangeEventArgs {Value=string.Empty}))" class="btn btn-secondary oi oi-x"></button>
+            </div>
+        </div>
+        <div class="col">
+            <button class="btn btn-primary float-end" @onclick="@ExportExcel"><i class="oi oi-data-transfer-download pe-2"></i>Выгрузить</button>
+        </div>
+    </div>
+</div>
+<br />
+
+<div class="table-solid" style="margin-top: 185px;">
+    <table class="table table-hover align-middle caption-top">
+        <thead class="thead-primary position-sticky" style="z-index: 2;width: 85.4%;top:290px;">
+            <tr>
+                <th>Фото</th>
+                <th>ФИО</th>
+                <th>Дата рождения</th>
+                <th>Дата увольнения</th>
+                <th>Должность</th>
+                <th>Подразделение</th>
+                <th>Регион</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Table == null)
+            {
+                <ToastNotification Data="Load " />
+            }
+            else if (Table.Count == 0)
+            {
+                <ToastNotification Data="NoData" />
+            }
+            else
+            {
+                foreach (var item in Table)
+                {
+                    var img = Convert.ToBase64String((byte[])item.Photo);
+                    string photo = "./images/avatar.jpg";
+                    if (img.Length >= 1)
+                    {
+                        photo = $"data:image/png;base64,{img}";
+                    }
+                    <tr>
+                        <td>
+                            <img src="@photo" class="img-thumbnail img-fluid" style="width: 80px;">
+                        </td>
+                        <td>@item.Fio</td>
+                        <td>@item.Dr.ToShortDateString()</td>
+                        <td>@item.De.ToShortDateString()</td>
+                        <td>@item.Dol</td>
+                        <td>@item.Grpprg</td>
+                        <td>@item.Region</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    ReviseModel rModel = new();
+    private List<ReviseModel> Table { get; set; }
+    private string SearchValue { get; set; }
+    [CascadingParameter] public MainLayout Layout { get; set; }
+    protected async override Task OnInitializedAsync()
+    {
+        Layout.Title = "Контроль нарушителей";
+        await Task.Run(RefreshTable);
+    }
+    void RefreshTable() => Table = rModel.GetNotFired();
+    void FilterTable(ChangeEventArgs e)/// Поиск
+    {
+        if (string.IsNullOrWhiteSpace(e.Value.ToString()))
+        {
+            SearchValue = null;
+            Table = rModel.GetNotFired();
+        }
+        else
+            Table = rModel.GetNotFired(e.Value.ToString());
+    }
+    void ExportExcel() { ExcelModel excelModel = new(); excelModel.GenerateReviseExcel(JS, Table, Layout.Title); }
+}

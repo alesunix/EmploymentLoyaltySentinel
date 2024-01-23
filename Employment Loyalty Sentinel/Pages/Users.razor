@@ -1,0 +1,184 @@
+﻿@page "/users"
+@attribute [Authorize]
+
+<div class="container-fluid position-fixed bg-light py-3 pt-5 border-start border-end border-bottom" style="z-index: 2;width: 85.5%;margin-top: -24px;">
+    <div class="row">
+        <div class="col btn-group" role="group">
+            <button class="btn btn-primary me-2" @onclick="@Add"><i class="oi oi-person pe-2"></i>Добавить</button>
+            <button disabled="@IsNotFocused" class="btn btn-secondary me-2" @onclick="@Edit"><i class="oi oi-excerpt pe-2"></i>Изменить</button>
+            <button disabled="@IsNotFocused" class="@VisibleDel btn btn-danger me-2" @onclick="@Delete"><i class="oi oi-trash pe-2"></i>Удалить</button>
+            <button disabled="@IsNotFocused" class="@VisibleRec btn btn-info me-2" @onclick="@Recovery"><i class="oi oi-reload pe-2"></i>Восстановить</button>
+        </div>
+        <div class="col btn-group float-end" role="group">
+            <div class="col-6">
+            </div>
+            <div class="col-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="oi oi-magnifying-glass"></i></span>
+                    <input @bind-value="SearchValue" class="form-control" placeholder="Поиск" @oninput="@FilterTable"></input>
+                    <button @onclick="(()=>FilterTable(new ChangeEventArgs {Value=string.Empty}))" class="btn btn-secondary oi oi-x"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<br />
+
+<!--User Table-->
+<div @ref="@Reference" class="table-solid" style="margin-top: 50px;">
+    <table class="table table-striped table-hover align-middle caption-top">
+        <thead class="thead-primary position-sticky" style="z-index: 2;width: 85.4%;top:155px;">
+            <tr>
+                <th>Сотрудник</th>
+                <th>Подразделение</th>
+                <th>Роль</th>
+                <th>Логин</th>
+                <th>Удален</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Table == null)
+            {
+                <ToastNotification Data="Load" />
+            }
+            else if (Table.Rows.Count == 0)
+            {
+                <ToastNotification Data="NoData" />
+            }
+            else
+            {
+                foreach (DataRow item in Table.Rows)
+                {
+                    int id = Convert.ToInt32(item["Id"]);/// id
+
+                    string bg = (id == SelectedId) ? "selected-row" : "";
+                    <tr class="hover-row @bg" @onclick="@(()=>RowClicked(id))" @key="item">
+                        <td hidden>@item["Id"]</td>
+                        <td>@item["Employee"]</td>
+                        <td>@item["Grpprg"]</td>
+                        <td>@item["Role"]</td>
+                        <td>@item["Login"]</td>
+                        <td>
+                            @if (item["Deleted"].ToString() == "T")
+                            {
+                                <i class="oi oi-trash h5" style="color:brown;"></i>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+<ToastNotification IsOpen="@Toast.IsOpen" Text="@Toast.RenderText" Level="@Toast.Level"></ToastNotification>
+@if (IsModalOpen)
+{
+    <ModalUser Title="@Title" Row="@Row" OnClose="@CloseModal"></ModalUser>
+}
+<ModalDialog IsOpen="@IsModalDialogOpen" Text="@RenderText" Title="@Title" OnClose="@CloseModal"></ModalDialog>
+@code {
+    private bool IsModalOpen { get; set; }
+    private bool IsModalDialogOpen { get; set; }
+    private bool IsNotFocused { get; set; } = true;
+    private string VisibleDel { get; set; } = "visible";
+    private string VisibleRec { get; set; } = "invisible";
+    private int SelectedId { get; set; }
+    private string Title { get; set; }
+    private RenderFragment RenderText { get; set; }
+    private string SearchValue { get; set; }
+    private DataTable Table { get; set; }
+    private DataRow Row { get; set; }
+    UserModel uModel = new UserModel();
+    [CascadingParameter] public MainLayout Layout { get; set; }
+    public ElementReference Reference { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        Layout.Title = "Список пользователей";
+        Layout.Page = this;
+        await Task.Run(RefreshTable);
+    }
+    void RefreshTable() => Table = uModel.GetDataUsers();
+    void FilterTable(ChangeEventArgs e)/// Поиск
+    {
+        if (string.IsNullOrWhiteSpace(e.Value.ToString()))
+        {
+            SearchValue = null;
+            Table = uModel.GetDataUsers(string.Empty);
+        }
+        else
+            Table = uModel.GetDataUsers(e.Value.ToString());
+    }
+    private void RowClicked(int id)
+    {
+        SelectedId = id;
+        IsNotFocused = (id == SelectedId) ? false : true;
+        Row = uModel.GetRowToEdit(SelectedId).Rows[0];
+        if (Row["Deleted"].ToString() == "F") { VisibleDel = "visible"; VisibleRec = "invisible"; }
+        else { VisibleDel = "invisible"; VisibleRec = "visible"; }
+    }
+    public void Add()
+    {
+        if (!IsModalOpen)
+        {
+            SetModalSettings(ModeButton.Add, "Добавление");
+        }
+    }
+    public void Edit()
+    {
+        if (!IsModalOpen && SelectedId > 0 && !IsNotFocused)
+        {
+            SetModalSettings(ModeButton.Edit, "Редактирование");
+        }
+    }
+    public void Delete()
+    {
+        if (!IsModalOpen && SelectedId > 0 && !IsNotFocused && VisibleDel == "visible")
+        {
+            SetModalDialogSettings(ModeButton.MarkDelRec, "Внимание!", @<span>Вы действительно хотие удалить?<br />@Row["Employee"]</span>, "T");
+        }
+    }
+    public void Recovery()
+    {
+        if (!IsModalOpen && SelectedId > 0 && !IsNotFocused && VisibleRec == "visible")
+        {
+            SetModalDialogSettings(ModeButton.MarkDelRec, "Внимание!", @<span>Вы действительно хотие восстановить?<br />@Row["Employee"]</span>, "F");
+        }
+    }
+    private void SetModalSettings(ModeButton mode, string title)
+    {
+        IsModalOpen = true;
+        Mode.Button = mode;
+        Title = title;
+    }
+    private void SetModalDialogSettings(ModeButton mode, string title, RenderFragment renderText, string deleted = null)
+    {
+        Mode.Button = mode;
+        IsModalDialogOpen = true;
+        Title = title;
+        RenderText = renderText;
+        uModel.Id = SelectedId;
+        uModel.Deleted = deleted;
+    }
+    private async Task CloseModal(bool accepted)
+    {
+        if (accepted)
+        {
+            if (Mode.Button == ModeButton.MarkDelRec || Mode.Button == ModeButton.Delete)
+            {
+                uModel.DeleteOrRecovery();
+            }
+            RefreshTable();
+            IsModalDialogOpen = false;
+            IsModalOpen = false;
+            await Toast.Notification(@<span>Пользователь успешно сохранен!</span>, ToastLevel.Success);
+
+        }
+        else
+        {
+            IsModalDialogOpen = false;
+            IsModalOpen = false;
+        }
+        await Task.Run(() => Reference.FocusAsync());
+        StateHasChanged();
+    }
+}

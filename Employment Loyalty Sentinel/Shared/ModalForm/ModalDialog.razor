@@ -1,0 +1,45 @@
+﻿@if (IsOpen)
+{
+    <div class="modal fade show" role="dialog" aria-modal="true" tabindex="-1" style="display:block;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!--Modal Header-->
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold" style="font-weight:bold;">@Title</h4>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="@ModalCancel"></button>
+                </div>
+                <!--Modal Body-->
+                <div class="modal-body mx-3">
+                    <p>@Text</p>
+                </div>
+                <!--Modal Footer-->
+                <div class="modal-footer">
+                    @if (Choice)
+                    {
+                        <button type="button" class="btn btn-success" style="width: 80px;" @onclick="@ModalOk">Да</button>
+                        <button type="button" class="btn btn-secondary" style="width: 80px;" @onclick="@ModalCancel">Нет</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-warning" style="width: 80px;" @onclick="@ModalOk">OK</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment Text { get; set; }
+    [Parameter] public bool Choice { get; set; } = true;
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+    private Task ModalOk()
+    {
+        return OnClose.InvokeAsync(true);
+    }
+    private Task ModalCancel()
+    {
+        return OnClose.InvokeAsync(false);
+    }
+}

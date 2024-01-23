@@ -1,0 +1,114 @@
+﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Система контроля</PageTitle>
+
+<CascadingValue Value="this">
+    <div @ref="@Reference" tabindex="0" @onkeyup="@HotKeys" class="page">
+        <div class="mySidebar">
+            <NavMenu />
+        </div>
+
+        <main>
+            <div class="top-row px-4 justify-content-between">
+                <div class="col">
+                    <h4>@Title</h4>
+                </div>
+                <div class="col text-end">
+                    <span class="pe-3">@Login</span>
+                    @if (Login != null)
+                    {
+                        <button type="button" class="btn btn-outline-dark btn-sm" @onclick="Logout"><i class="oi oi-account-logout pe-2"></i>Выход</button>
+                    }
+                </div>
+            </div>
+
+            <article class="content py-4">
+                @Body
+            </article>
+        </main>
+    </div>
+</CascadingValue>
+
+@code {
+    public object Page { get; set; }
+    private ElementReference Reference;
+    private string title;
+    private string login;
+    public string Title
+    {
+        get => title;
+        set
+        {
+            title = value;
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+    public string Login
+    {
+        get => login;
+        set
+        {
+            login = value;
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+    [CascadingParameter] private Task<AuthenticationState> AuthStat { get; set; }
+    protected async override Task OnInitializedAsync()
+    {
+        var auth = await AuthStat;
+        Login = auth.User.FindFirstValue(ClaimTypes.Name);
+    }
+    private async Task Logout()
+    {
+        var sp = (EmploymentLoyaltySentinel.Authentication.Authentication)authStateProvider;
+        await sp.UpdateAuthenticationState(null);
+        Login = null;
+    }
+    void HotKeys(KeyboardEventArgs e)
+    {
+        if (e.CtrlKey == true) Condition(e.Key);
+    }
+    private void Condition(string key)
+    {
+        if (Title == "Справочник нарушений")
+        {
+            if (key == "1")
+                ((Pages.Offense)Page).Add();
+            else if (key == "3")
+                ((Pages.Offense)Page).Edit();
+            else if (key == "4")
+                ((Pages.Offense)Page).Delete();
+            else if (key == "5")
+                ((Pages.Offense)Page).Recovery();
+            ((Pages.Offense)Page).Reference = Reference;
+        }
+        else if (Title == "Список пользователей")
+        {
+            if (key == "1")
+                ((Pages.Users)Page).Add();
+            else if (key == "3")
+                ((Pages.Users)Page).Edit();
+            else if (key == "4")
+                ((Pages.Users)Page).Delete();
+            else if (key == "5")
+                ((Pages.Users)Page).Recovery();
+            ((Pages.Users)Page).Reference = Reference;
+        }
+        else if (Title == "Данные по нарушителям")
+        {
+            if (key == "1")
+                ((Pages.Offenders)Page).Add();
+            else if (key == "2")
+                ((Pages.Offenders)Page).View();
+            else if (key == "3")
+                ((Pages.Offenders)Page).Edit();
+            else if (key == "4")
+                ((Pages.Offenders)Page).Delete();
+            else if (key == "5")
+                ((Pages.Offenders)Page).Recovery();
+            ((Pages.Offenders)Page).Reference = Reference;
+        }
+    }
+}

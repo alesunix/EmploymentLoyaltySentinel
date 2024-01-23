@@ -1,0 +1,16 @@
+﻿.cardlink {
+    width: 180px;
+    height: 200px;
+    padding: 10px;
+    display: inline-block;
+    text-align: center;
+    border: 1px solid #CCC;
+    border-radius: 5px;
+    vertical-align: top;
+    margin: 10px
+}
+.cardlink img{
+    width: 128px;
+    height: 128px;
+    padding-bottom: 10px;
+}
