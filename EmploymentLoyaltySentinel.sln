@@ -5,6 +5,8 @@ VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmploymentLoyaltySentinel", "Employment Loyalty Sentinel\EmploymentLoyaltySentinel.csproj", "{089D1696-5072-42B3-8314-413A136EE027}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SendMailOffenders", "SendMailOffenders\SendMailOffenders\SendMailOffenders.csproj", "{882B1ED0-D3DF-4250-9548-E4CA3D29F374}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{089D1696-5072-42B3-8314-413A136EE027}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{089D1696-5072-42B3-8314-413A136EE027}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{089D1696-5072-42B3-8314-413A136EE027}.Release|Any CPU.Build.0 = Release|Any CPU
+		{882B1ED0-D3DF-4250-9548-E4CA3D29F374}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{882B1ED0-D3DF-4250-9548-E4CA3D29F374}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{882B1ED0-D3DF-4250-9548-E4CA3D29F374}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{882B1ED0-D3DF-4250-9548-E4CA3D29F374}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
